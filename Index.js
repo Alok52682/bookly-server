@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -13,6 +13,23 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.w2hsrgs.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+function verifyToken(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        res.status(401).send('Unauthorized Access');
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN, function (error, decoded) {
+        if (error) {
+            res.status(403).send({ message: 'Forbidden Access' });
+        }
+        else {
+            req.decoded = decoded;
+            next();
+        }
+    })
+}
+
 async function run() {
     try {
         const categoriesCollection = client.db('bookly').collection('categories');
@@ -22,11 +39,6 @@ async function run() {
             const query = {};
             const categories = await categoriesCollection.find(query).toArray();
             res.send(categories);
-        })
-        app.get('/slers', async (req, res) => {
-            const query = { role: "Seler" };
-            const allSeler = await usersCollection.find(query).toArray();
-            res.send(allSeler);
         })
         app.get('/jwt', async (req, res) => {
             const email = req.query.email;
@@ -40,10 +52,27 @@ async function run() {
                 res.status(403).send({ message: 'Forbidden Access' })
             }
         })
-        app.get('/buyers', async (req, res) => {
+        app.get('/slers', verifyToken, async (req, res) => {
+            const query = { role: "Seler" };
+            const allSeler = await usersCollection.find(query).toArray();
+            res.send(allSeler);
+        })
+        app.get('/buyers', verifyToken, async (req, res) => {
             const query = { role: "Buyer" };
             const allBuyers = await usersCollection.find(query).toArray();
             res.send(allBuyers);
+        })
+        app.get('/users/admin', async (req, res) => {
+            const email = req.query.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            res.send({ isAdmin: user?.role === "admin" });
+        })
+        app.get('/users/seler', async (req, res) => {
+            const email = req.query.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            res.send({ isSeler: user?.role === "Seler" });
         })
         app.post('/users', async (req, res) => {
             const user = req.body;

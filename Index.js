@@ -19,14 +19,25 @@ async function run() {
 
         app.get('/categories', async (req, res) => {
             const query = {};
-            const categories = await categoriesCollection.find(query).toArray()
+            const categories = await categoriesCollection.find(query).toArray();
             res.send(categories);
+        })
+        app.get('/slers', async (req, res) => {
+            const query = { role: "Seler" };
+            const allSeler = await usersCollection.find(query).toArray();
+            res.send(allSeler);
+        })
+        app.get('/buyers', async (req, res) => {
+            const query = { role: "Buyer" };
+            const allBuyers = await usersCollection.find(query).toArray();
+            res.send(allBuyers);
         })
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             res.send(result);
         })
+
 
     }
     finally {

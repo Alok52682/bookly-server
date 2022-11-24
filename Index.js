@@ -2,6 +2,7 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 4000;
 
@@ -26,6 +27,18 @@ async function run() {
             const query = { role: "Seler" };
             const allSeler = await usersCollection.find(query).toArray();
             res.send(allSeler);
+        })
+        app.get('/jwt', async (req, res) => {
+            const email = req.query.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            if (user) {
+                const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '15d' });
+                res.send({ accessToken: token });
+            }
+            else {
+                res.status(403).send({ message: 'Forbidden Access' })
+            }
         })
         app.get('/buyers', async (req, res) => {
             const query = { role: "Buyer" };

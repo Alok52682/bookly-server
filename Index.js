@@ -34,6 +34,7 @@ async function run() {
     try {
         const categoriesCollection = client.db('bookly').collection('categories');
         const usersCollection = client.db('bookly').collection('users');
+        const booksCollection = client.db('bookly').collection('books');
 
         app.get('/categories', async (req, res) => {
             const query = {};
@@ -77,6 +78,11 @@ async function run() {
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
+            res.send(result);
+        })
+        app.post('/books', verifyToken, async (req, res) => {
+            const book = req.body;
+            const result = await booksCollection.insertOne(book)
             res.send(result);
         })
 

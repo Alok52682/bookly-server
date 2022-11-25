@@ -103,7 +103,7 @@ async function run() {
             const books = await booksCollection.find(query).toArray()
             res.send(books);
         })
-        app.get('/mybooks', async (req, res) => {
+        app.get('/mybooks', verifyToken, async (req, res) => {
             const email = req.query.email;
             const query = { selerEmail: email };
             const myBooks = await booksCollection.find(query).toArray()
@@ -122,6 +122,12 @@ async function run() {
                 }
             }
             const updateResult = await booksCollection.updateOne(filter, updatedDoc,);
+            res.send(result);
+        })
+        app.delete('/mybooks/:id', verifyToken, verifyseler, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await booksCollection.deleteOne(query);
             res.send(result);
         })
 

@@ -92,6 +92,18 @@ async function run() {
             const user = await usersCollection.findOne(query);
             res.send({ isAdmin: user?.role === "admin" });
         })
+        app.get('/users/Buyer', async (req, res) => {
+            const email = req.query.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            res.send({ isBuyer: user?.role === "Buyer" });
+        })
+        app.get('/users/varifyed', async (req, res) => {
+            const email = req.query.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            res.send({ isVerified: user?.varify === true });
+        })
         app.get('/users/seler', async (req, res) => {
             const email = req.query.email;
             const query = { email };
@@ -186,6 +198,12 @@ async function run() {
             await selervarificationsCollection.updateOne(query, updatedDoc, option);
             const user = await usersCollection.updateOne(query, updatedDoc, option);
             res.send(user);
+        })
+        app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(query);
+            res.send(result);
         })
 
     }

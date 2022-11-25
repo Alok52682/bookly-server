@@ -36,6 +36,7 @@ async function run() {
         const usersCollection = client.db('bookly').collection('users');
         const booksCollection = client.db('bookly').collection('books');
         const bookingsCollection = client.db('bookly').collection('bookings');
+        const advertisementsCollection = client.db('bookly').collection('advertisements');
 
         const verifyseler = async (req, res, next) => {
             const decodedEmail = req.decoded.email;
@@ -99,7 +100,7 @@ async function run() {
         })
         app.get('/books/:id', async (req, res) => {
             const categoryId = req.params.id;
-            const query = { categoryId };
+            const query = { categoryId, sold: false };
             const books = await booksCollection.find(query).toArray()
             res.send(books);
         })
@@ -135,6 +136,23 @@ async function run() {
             const query = { email };
             const myorders = await bookingsCollection.find(query).toArray();
             res.send(myorders);
+        })
+        app.put('/books/:id', verifyToken, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const option = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    advertise: true
+                }
+            }
+            const result = await booksCollection.updateOne(query, updatedDoc, option);
+            res.send(result);
+        })
+        app.get('/advertised', async (req, res) => {
+            const query = { advertise: true, sold: false };
+            const result = await booksCollection.find(query).toArray();
+            res.send(result);
         })
 
     }

@@ -35,6 +35,7 @@ async function run() {
         const categoriesCollection = client.db('bookly').collection('categories');
         const usersCollection = client.db('bookly').collection('users');
         const booksCollection = client.db('bookly').collection('books');
+        const bookingsCollection = client.db('bookly').collection('bookings');
 
         app.get('/categories', async (req, res) => {
             const query = {};
@@ -91,7 +92,21 @@ async function run() {
             const books = await booksCollection.find(query).toArray()
             res.send(books);
         })
-
+        app.post('/bookings', verifyToken, async (req, res) => {
+            const booking = req.body;
+            const result = await bookingsCollection.insertOne(booking);
+            const id = req.query.bookId;
+            const filter = {
+                _id: ObjectId(id)
+            }
+            const updatedDoc = {
+                $set: {
+                    sold: true
+                }
+            }
+            const updateResult = await booksCollection.updateOne(filter, updatedDoc,);
+            res.send(result);
+        })
 
     }
     finally {

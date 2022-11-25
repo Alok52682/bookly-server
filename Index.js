@@ -130,6 +130,12 @@ async function run() {
             const result = await booksCollection.deleteOne(query);
             res.send(result);
         })
+        app.get('/myorders', verifyToken, async (req, res) => {
+            const email = req.query.email;
+            const query = { email };
+            const myorders = await bookingsCollection.find(query).toArray();
+            res.send(myorders);
+        })
 
     }
     finally {

@@ -37,6 +37,17 @@ async function run() {
         const booksCollection = client.db('bookly').collection('books');
         const bookingsCollection = client.db('bookly').collection('bookings');
 
+        const verifyseler = async (req, res, next) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'Seler') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
         app.get('/categories', async (req, res) => {
             const query = {};
             const categories = await categoriesCollection.find(query).toArray();
@@ -81,7 +92,7 @@ async function run() {
             const result = await usersCollection.insertOne(user);
             res.send(result);
         })
-        app.post('/books', verifyToken, async (req, res) => {
+        app.post('/books', verifyToken, verifyseler, async (req, res) => {
             const book = req.body;
             const result = await booksCollection.insertOne(book)
             res.send(result);
@@ -91,6 +102,12 @@ async function run() {
             const query = { categoryId };
             const books = await booksCollection.find(query).toArray()
             res.send(books);
+        })
+        app.get('/mybooks', async (req, res) => {
+            const email = req.query.email;
+            const query = { selerEmail: email };
+            const myBooks = await booksCollection.find(query).toArray()
+            res.send(myBooks);
         })
         app.post('/bookings', verifyToken, async (req, res) => {
             const booking = req.body;

@@ -36,7 +36,7 @@ async function run() {
         const usersCollection = client.db('bookly').collection('users');
         const booksCollection = client.db('bookly').collection('books');
         const bookingsCollection = client.db('bookly').collection('bookings');
-        const advertisementsCollection = client.db('bookly').collection('advertisements');
+        const selervarificationsCollection = client.db('bookly').collection('selervarifications');
 
         const verifyseler = async (req, res, next) => {
             const decodedEmail = req.decoded.email;
@@ -44,6 +44,16 @@ async function run() {
             const user = await usersCollection.findOne(query);
 
             if (user?.role !== 'Seler') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+        const verifyAdmin = async (req, res, next) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'admin') {
                 return res.status(403).send({ message: 'forbidden access' })
             }
             next();
@@ -153,6 +163,29 @@ async function run() {
             const query = { advertise: true, sold: false };
             const result = await booksCollection.find(query).toArray();
             res.send(result);
+        })
+        app.post('/verifyselerreq', verifyToken, verifyseler, async (req, res) => {
+            const user = req.body;
+            const result = await selervarificationsCollection.insertOne(user);
+            res.send(result);
+        })
+        app.get('/verifyselerreq', verifyToken, verifyAdmin, async (req, res) => {
+            const query = { varify: false };
+            const result = await selervarificationsCollection.find(query).toArray();
+            res.send(result);
+        })
+        app.put('/verifyselerreq', verifyToken, verifyAdmin, async (req, res) => {
+            const email = req.query.email;
+            const query = { email };
+            const option = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    varify: true
+                }
+            }
+            await selervarificationsCollection.updateOne(query, updatedDoc, option);
+            const user = await usersCollection.updateOne(query, updatedDoc, option);
+            res.send(user);
         })
 
     }

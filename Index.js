@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const app = express();
+const stripe = require("stripe")(process.env.STRIP_KEY);
 const port = process.env.PORT || 4000;
 
 app.use(cors());
@@ -37,6 +38,8 @@ async function run() {
         const booksCollection = client.db('bookly').collection('books');
         const bookingsCollection = client.db('bookly').collection('bookings');
         const selervarificationsCollection = client.db('bookly').collection('selervarifications');
+        const reportsCollection = client.db('bookly').collection('reports');
+        const paymentsCollection = client.db('bookly').collection('payments');
 
         const verifyseler = async (req, res, next) => {
             const decodedEmail = req.decoded.email;
@@ -58,7 +61,21 @@ async function run() {
             }
             next();
         }
-
+        app.post('/create-payment-intent', async (req, res) => {
+            const order = req.body;
+            const price = order.price;
+            const amount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                currency: 'usd',
+                amount,
+                "payment_method_types": [
+                    "card"
+                ]
+            })
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        })
         app.get('/categories', async (req, res) => {
             const query = {};
             const categories = await categoriesCollection.find(query).toArray();
@@ -159,6 +176,12 @@ async function run() {
             const myorders = await bookingsCollection.find(query).toArray();
             res.send(myorders);
         })
+        app.get('/myorders/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await bookingsCollection.findOne(query);
+            res.send(result);
+        })
         app.put('/books/:id', verifyToken, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
@@ -203,6 +226,42 @@ async function run() {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await usersCollection.deleteOne(query);
+            res.send(result);
+        })
+        app.post('/reports', async (req, res) => {
+            const reportedBook = req.body;
+            const result = await reportsCollection.insertOne(reportedBook);
+            res.send(result);
+        })
+        app.get('/reports', verifyToken, verifyAdmin, async (req, res) => {
+            const query = { deleted: false };
+            const result = await reportsCollection.find(query).toArray();
+            res.send(result);
+        })
+        app.put('/reports', verifyToken, verifyAdmin, async (req, res) => {
+            const reporteItem = req.body;
+            const query = { _id: ObjectId(reporteItem.bookId) };
+            await booksCollection.deleteOne(query);
+            const filter = { _id: ObjectId(reporteItem._id) };
+            const option = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    deleted: true
+                }
+            }
+            const result = await reportsCollection.updateOne(filter, updatedDoc, option);
+            res.send(result);
+        })
+        app.put('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const option = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    varify: true
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updatedDoc, option);
             res.send(result);
         })
 

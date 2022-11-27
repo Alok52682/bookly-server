@@ -264,6 +264,20 @@ async function run() {
             const result = await usersCollection.updateOne(filter, updatedDoc, option);
             res.send(result);
         })
+        app.post('/transaction', verifyToken, async (req, res) => {
+            const payment = req.body;
+            const result = await paymentsCollection.insertOne(payment);
+            const orderid = payment.orderId;
+            const filter = { _id: ObjectId(orderid) };
+            const option = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    paid: true
+                }
+            }
+            await bookingsCollection.updateOne(filter, updatedDoc, option);
+            res.send(result);
+        })
 
     }
     finally {

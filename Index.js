@@ -76,6 +76,55 @@ async function run() {
                 clientSecret: paymentIntent.client_secret,
             });
         })
+        app.post('/reports', async (req, res) => {
+            const reportedBook = req.body;
+            const result = await reportsCollection.insertOne(reportedBook);
+            res.send(result);
+        })
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            res.send(result);
+        })
+        app.post('/books', verifyToken, verifyseler, async (req, res) => {
+            const book = req.body;
+            const result = await booksCollection.insertOne(book)
+            res.send(result);
+        })
+        app.post('/bookings', verifyToken, async (req, res) => {
+            const booking = req.body;
+            const result = await bookingsCollection.insertOne(booking);
+            const id = req.query.bookId;
+            const filter = {
+                _id: ObjectId(id)
+            }
+            const updatedDoc = {
+                $set: {
+                    sold: true
+                }
+            }
+            const updateResult = await booksCollection.updateOne(filter, updatedDoc,);
+            res.send(result);
+        })
+        app.post('/verifyselerreq', verifyToken, verifyseler, async (req, res) => {
+            const user = req.body;
+            const result = await selervarificationsCollection.insertOne(user);
+            res.send(result);
+        })
+        app.post('/transaction', verifyToken, async (req, res) => {
+            const payment = req.body;
+            const result = await paymentsCollection.insertOne(payment);
+            const orderid = payment.orderId;
+            const filter = { _id: ObjectId(orderid) };
+            const option = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    paid: true
+                }
+            }
+            await bookingsCollection.updateOne(filter, updatedDoc, option);
+            res.send(result);
+        })
         app.get('/categories', async (req, res) => {
             const query = {};
             const categories = await categoriesCollection.find(query).toArray();
@@ -127,16 +176,6 @@ async function run() {
             const user = await usersCollection.findOne(query);
             res.send({ isSeler: user?.role === "Seler" });
         })
-        app.post('/users', async (req, res) => {
-            const user = req.body;
-            const result = await usersCollection.insertOne(user);
-            res.send(result);
-        })
-        app.post('/books', verifyToken, verifyseler, async (req, res) => {
-            const book = req.body;
-            const result = await booksCollection.insertOne(book)
-            res.send(result);
-        })
         app.get('/books/:id', async (req, res) => {
             const categoryId = req.params.id;
             const query = { categoryId, sold: false };
@@ -149,27 +188,6 @@ async function run() {
             const myBooks = await booksCollection.find(query).toArray()
             res.send(myBooks);
         })
-        app.post('/bookings', verifyToken, async (req, res) => {
-            const booking = req.body;
-            const result = await bookingsCollection.insertOne(booking);
-            const id = req.query.bookId;
-            const filter = {
-                _id: ObjectId(id)
-            }
-            const updatedDoc = {
-                $set: {
-                    sold: true
-                }
-            }
-            const updateResult = await booksCollection.updateOne(filter, updatedDoc,);
-            res.send(result);
-        })
-        app.delete('/mybooks/:id', verifyToken, verifyseler, async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: ObjectId(id) };
-            const result = await booksCollection.deleteOne(query);
-            res.send(result);
-        })
         app.get('/myorders', verifyToken, async (req, res) => {
             const email = req.query.email;
             const query = { email };
@@ -180,6 +198,21 @@ async function run() {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await bookingsCollection.findOne(query);
+            res.send(result);
+        })
+        app.get('/advertised', async (req, res) => {
+            const query = { advertise: true, sold: false };
+            const result = await booksCollection.find(query).toArray();
+            res.send(result);
+        })
+        app.get('/verifyselerreq', verifyToken, verifyAdmin, async (req, res) => {
+            const query = { varify: false };
+            const result = await selervarificationsCollection.find(query).toArray();
+            res.send(result);
+        })
+        app.get('/reports', verifyToken, verifyAdmin, async (req, res) => {
+            const query = { deleted: false };
+            const result = await reportsCollection.find(query).toArray();
             res.send(result);
         })
         app.put('/books/:id', verifyToken, async (req, res) => {
@@ -194,21 +227,6 @@ async function run() {
             const result = await booksCollection.updateOne(query, updatedDoc, option);
             res.send(result);
         })
-        app.get('/advertised', async (req, res) => {
-            const query = { advertise: true, sold: false };
-            const result = await booksCollection.find(query).toArray();
-            res.send(result);
-        })
-        app.post('/verifyselerreq', verifyToken, verifyseler, async (req, res) => {
-            const user = req.body;
-            const result = await selervarificationsCollection.insertOne(user);
-            res.send(result);
-        })
-        app.get('/verifyselerreq', verifyToken, verifyAdmin, async (req, res) => {
-            const query = { varify: false };
-            const result = await selervarificationsCollection.find(query).toArray();
-            res.send(result);
-        })
         app.put('/verifyselerreq', verifyToken, verifyAdmin, async (req, res) => {
             const email = req.query.email;
             const query = { email };
@@ -221,22 +239,6 @@ async function run() {
             await selervarificationsCollection.updateOne(query, updatedDoc, option);
             const user = await usersCollection.updateOne(query, updatedDoc, option);
             res.send(user);
-        })
-        app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: ObjectId(id) };
-            const result = await usersCollection.deleteOne(query);
-            res.send(result);
-        })
-        app.post('/reports', async (req, res) => {
-            const reportedBook = req.body;
-            const result = await reportsCollection.insertOne(reportedBook);
-            res.send(result);
-        })
-        app.get('/reports', verifyToken, verifyAdmin, async (req, res) => {
-            const query = { deleted: false };
-            const result = await reportsCollection.find(query).toArray();
-            res.send(result);
         })
         app.put('/reports', verifyToken, verifyAdmin, async (req, res) => {
             const reporteItem = req.body;
@@ -264,18 +266,16 @@ async function run() {
             const result = await usersCollection.updateOne(filter, updatedDoc, option);
             res.send(result);
         })
-        app.post('/transaction', verifyToken, async (req, res) => {
-            const payment = req.body;
-            const result = await paymentsCollection.insertOne(payment);
-            const orderid = payment.orderId;
-            const filter = { _id: ObjectId(orderid) };
-            const option = { upsert: true };
-            const updatedDoc = {
-                $set: {
-                    paid: true
-                }
-            }
-            await bookingsCollection.updateOne(filter, updatedDoc, option);
+        app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(query);
+            res.send(result);
+        })
+        app.delete('/mybooks/:id', verifyToken, verifyseler, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await booksCollection.deleteOne(query);
             res.send(result);
         })
 

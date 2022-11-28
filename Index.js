@@ -7,6 +7,7 @@ const app = express();
 const stripe = require("stripe")(process.env.STRIP_KEY);
 const port = process.env.PORT || 4000;
 
+// middlewares
 app.use(cors());
 app.use(express.json());
 
@@ -14,6 +15,7 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.w2hsrgs.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+// ferifytoken function
 function verifyToken(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -41,6 +43,7 @@ async function run() {
         const reportsCollection = client.db('bookly').collection('reports');
         const paymentsCollection = client.db('bookly').collection('payments');
 
+        // verifing user roles
         const verifyseler = async (req, res, next) => {
             const decodedEmail = req.decoded.email;
             const query = { email: decodedEmail };
@@ -61,6 +64,7 @@ async function run() {
             }
             next();
         }
+        // all post methods are down below
         app.post('/create-payment-intent', async (req, res) => {
             const order = req.body;
             const price = order.price;
@@ -125,6 +129,7 @@ async function run() {
             await bookingsCollection.updateOne(filter, updatedDoc, option);
             res.send(result);
         })
+        // all get methods down below
         app.get('/categories', async (req, res) => {
             const query = {};
             const categories = await categoriesCollection.find(query).toArray();
@@ -215,6 +220,7 @@ async function run() {
             const result = await reportsCollection.find(query).toArray();
             res.send(result);
         })
+        // all put methods are down below
         app.put('/books/:id', verifyToken, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
@@ -266,6 +272,7 @@ async function run() {
             const result = await usersCollection.updateOne(filter, updatedDoc, option);
             res.send(result);
         })
+        // delete methods are here
         app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
